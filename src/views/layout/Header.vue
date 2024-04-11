@@ -30,7 +30,7 @@ const realname = ref("Admin")
 </template>
 <style scoped>
 .header-title-txt{
-    font-size: 25px;
+    font-size: 23px;
     font-weight: bold;
     color: white;
 
@@ -47,6 +47,7 @@ const realname = ref("Admin")
 
 .el-dropdown-link{
     display: flex;
+    font-size: 20px;
     justify-content: center;
     color: white;
 

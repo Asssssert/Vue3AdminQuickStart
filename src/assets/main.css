@@ -4,3 +4,10 @@
   margin: 0;
   padding: 0;
 }
+
+.setting-table-header {
+  text-align: center
+}
+.setting-tree-btn-box{
+  margin-top: 50px;
+}
