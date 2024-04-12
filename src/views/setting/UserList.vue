@@ -58,11 +58,24 @@ const treeProps = {
     label: 'nickname',
     children: 'child'
 }
+
+const searchKey = ref("")
+import {Search} from '@element-plus/icons-vue'
+
 </script>
 
 <template>
     <div class="user-list-box">
-
+        <el-input
+            v-model="searchKey"
+            size="small"
+            style="width: 240px"
+            placeholder="输入关键字" 
+            :prefix-icon="Search">
+            <template #append>
+                <el-button >搜索</el-button>
+            </template>
+        </el-input>
         <el-table :empty-text="'暂无数据'" :stripe="true" :data="data.data" :highlight-current-row="true" height="700px">
             <el-table-column align="center" header-align="center" prop="id" label="编号" />
             <el-table-column align="center" header-align="center" prop="username" label="用户名" />
@@ -74,9 +87,9 @@ const treeProps = {
             <el-table-column align="center" header-align="center" prop="lastLogin" label="最后登录时间" width="170" />
             <el-table-column align="center" header-align="center" prop="lastLoginIp" label="最后登录IP" width="170" />
             <el-table-column align="center" header-align="center" prop="createTime" label="创建时间" width="170" />
-            <el-table-column align="center" header-align="center" prop="state" label="状态">
+            <el-table-column align="center" header-align="center" prop="state" label="账号状态">
                 <template #default="scope">
-                    <el-switch v-model="scope.row.state" :active-value="0" :inactive-value="1" />
+                    <el-switch inline-prompt active-text="正常" inactive-text="禁用" v-model="scope.row.state" :active-value="0" :inactive-value="1" />
                 </template>
             </el-table-column>
             <el-table-column align="center" header-align="center" label="操作" fixed="right" width="200">
