@@ -56,6 +56,17 @@ const router = createRouter({
           name:'operationLog',
           component:()=>import('../views/monitor/OperationLog.vue')
         },
+        // 系统维护
+        {
+          path:'/home/fileList',
+          name:'fileList',
+          component:()=>import('../views/operation/FileList.vue')
+        },
+        {
+          path:'/home/dbList',
+          name:'dbList',
+          component:()=>import('../views/operation/DatabaseList.vue')
+        },
       ]
     },
 
