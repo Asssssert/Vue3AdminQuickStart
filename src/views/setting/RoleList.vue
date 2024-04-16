@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { ElTree } from 'element-plus'
 
-const data = reactive(
+const roleData = reactive(
     {
-        total: 50, page: 1, size: 10,
-        data: [
-            { id: 1, name: "admin", nickname: "管理员" },
-            { id: 2, name: "user", nickname: "普通用户" },
-        ]
+        data: []
     }
 )
+
+const pagination = reactive({
+    total: 0,
+    page: 0,
+    size: 0,
+})
 
 const perData = reactive(
     {
@@ -60,7 +62,6 @@ const menuData = reactive(
     }
 )
 
-const  dialogType = ref('')
 const treeData = reactive({})
 
 const handleEdit = (row: object) => {
@@ -72,25 +73,40 @@ const handleDel = (row: object) => {
 }
 
 const handlePermission = (val: number) => {
-    dialogType.value="permission"
+    dialog.title = "权限"
+    dialog.width = 400
+    dialog.type = "permission"
     treeData.value = perData
-    dialogVisible.value = true
+    dialog.show = true
 }
 
 const handleMenu = (val: number) => {
-    dialogType.value="menu"
+    dialog.title = "菜单"
+    dialog.width = 400
+    dialog.type = "menu"
     treeData.value = menuData
-    dialogVisible.value = true
+    dialog.show = true
+}
+
+const addRole = (val: number) => {
+    dialog.title = "添加角色"
+    dialog.width = 800
+    dialog.type = "role"
+
+    dialog.show = true
 }
 
 
 const handleSizeChange = (val: number) => {
-    console.log("handleSizeChange")
+    console.log('handleSizeChange',val)
 }
 
 const handleCurrentChange = (val: number) => {
-    console.log("handleSizeChange")
+    pagination.page = val
+    getRole();
+    console.log(val)
 }
+
 
 const treeProps = {
     label: 'title',
@@ -99,25 +115,79 @@ const treeProps = {
 
 const settingTree = ref<InstanceType<typeof ElTree>>()
 
-const dialogVisible = ref(false)
+
+const dialog = reactive({
+    title: "",
+    show: false,
+    width: 400,
+    type: "",
+
+})
 
 const dialogFormVisible = (flag: number) => {
-    
-    if(flag==1){
+
+    if (flag == 1) {
         const checkPerId = settingTree.value.getCheckedKeys()
         console.log(checkPerId);
     }
-    dialogVisible.value = false
+    dialog.show = false
+}
+
+import request from '@/assets/request';
+
+const getRole = async() => {
+    await request.get("/role/page", { page: pagination.page, size: pagination.size }).then(resp => {
+        roleData.data = resp.data.records
+        pagination.total = resp.data.total
+        pagination.page = resp.data.current
+        pagination.size = resp.data.size
+    });
+}
+
+onMounted(async () => {
+    const result =  getRole();
+})
+
+
+
+const form = reactive({
+    roleName: "",
+    roleDescription: ""
+})
+
+const formRule = reactive({
+    roleName: [
+        { required: true, message: '请输入角色名称', trigger: 'blur' },
+    ],
+})
+
+
+
+import notice from '@/assets/notice'
+
+const submit = async () => {
+    const result = request.post("/role/add", form)
+    if (result.code == 200) {
+        dialog.show = false;
+        notice('success', '消息', result.msg)
+        await getRole()
+    }
+    //console.log(result);
+
+    //console.log(form);
 }
 
 </script>
 
 <template>
+    <el-button type="primary" @click="addRole">添加角色</el-button>
     <div class="menu-list-box">
-        <el-table :empty-text="'暂无数据'" :stripe="true" :data="data.data" :highlight-current-row="true" height="700px">
-            <el-table-column align="center" header-align="center" prop="id" label="编号" width="150" />
-            <el-table-column align="center" header-align="center" prop="name" label="角色名" />
-            <el-table-column align="center" header-align="center" prop="nickname" label="名称" />
+
+        <el-table :empty-text="'暂无数据'" :stripe="true" :data="roleData.data" :highlight-current-row="true"
+            height="700px">
+            <el-table-column align="center" header-align="center" prop="roleId" label="编号" width="150" />
+            <el-table-column align="center" header-align="center" prop="roleName" label="角色" />
+            <el-table-column align="center" header-align="center" prop="roleDescription" label="描述" />
             <el-table-column align="center" header-align="center" label="操作" fixed="right" width="200">
                 <template #default="scope">
                     <el-button link type="primary" @click="handlePermission(scope.row)">权限</el-button>
@@ -127,21 +197,37 @@ const dialogFormVisible = (flag: number) => {
                 </template>
             </el-table-column>
         </el-table>
+        <el-pagination :current-page="pagination.page" :page-size="pagination.size" :total="pagination.total"
+            small="small" layout="prev, pager, next, jumper" @update:page-size="handleSizeChange"
+            @update:current-page="handleCurrentChange" />
 
-        <el-pagination v-model:current-page="data.page" v-model:page-size="data.size" small="small"
-            layout="prev, pager, next, jumper" :total="data.total" @size-change="handleSizeChange"
-            @current-change="handleCurrentChange" />
-        <el-dialog v-model="dialogVisible" title="权限" width="400">
-            <el-tree ref="settingTree" :data="treeData.value.data" :props="treeProps" node-key="id" show-checkbox />
-            <div class="setting-tree-btn-box">
-                <el-button @click="dialogFormVisible(0)">取消</el-button>
-                <el-button type="primary" @click="dialogFormVisible(1)">
-                    提交
-                </el-button>
+        <el-dialog v-model="dialog.show" :title="dialog.title" :width="dialog.width">
+            <div class="dialog-show-box" v-if="dialog.type != 'role'">
+                <el-tree ref="settingTree" :data="treeData.value.data" :props="treeProps" node-key="id" show-checkbox />
+                <div class="setting-tree-btn-box">
+                    <el-button @click="dialogFormVisible(0)">取消</el-button>
+                    <el-button type="primary" @click="dialogFormVisible(1)">
+                        提交
+                    </el-button>
+                </div>
+            </div>
+            <div v-else>
+                <el-form :model="form" :rules="formRule" label-width="80px">
+                    <el-form-item label="角色名称" prop="roleName">
+                        <el-input v-model="form.roleName"></el-input>
+                    </el-form-item>
+                    <el-form-item label="角色描述" prop="roleDescription">
+                        <el-input v-model="form.roleDescription"></el-input>
+                    </el-form-item>
+                </el-form>
+                <div class="setting-tree-btn-box">
+                    <el-button @click="dialog.show = false">取消</el-button>
+                    <el-button type="primary" @click="submit">
+                        提交
+                    </el-button>
+                </div>
             </div>
         </el-dialog>
     </div>
 </template>
-<style scoped>
-
-</style>
+<style scoped></style>
