@@ -1,5 +1,6 @@
 import axios from "axios";
 import type { AxiosResponse, AxiosError } from "axios";
+import notice from "./notice";
 
 
 // 创建 Axios 实例
@@ -35,6 +36,7 @@ request.interceptors.response.use(
     return Promise.reject() // 如果响应状态不是200，则返回一个拒绝的Promise
   },
   (error: AxiosError) => {
+    notice('error', '错误',"服务器错误")
     return Promise.reject(error)
   }
 );

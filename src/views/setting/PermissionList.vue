@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
+
+const pagination = reactive({
+    total: 0,
+    page: 0,
+    size: 0,
+})
 
 const data = reactive(
     {
-        total: 50, page: 1, size: 10,
         data: [
             {
                 id: 1, title: "公有权限", path: "public", method: "", parentId: 0, auth: "", createTime: '2022-01-01', type: 0, remark: "", child: [
@@ -40,26 +45,132 @@ const handleSizeChange = (val: number) => {
 const handleCurrentChange = (val: number) => {
     console.log("handleSizeChange")
 }
+
+const addpermission = () => {
+    dialog.show = true;
+}
+
+const dialog = reactive({
+    title: "添加权限",
+    show: false,
+    width: 400,
+    type: "",
+
+})
+
+const form = reactive({
+    permissionName: "",
+    permissionParentId: "1",
+    permissionCode: "",
+    permissionDesc: "",
+    permissionMethod: "",
+    permissionApi: ""
+})
+
+const formRule = reactive({
+    permissionName: [
+        { required: true, message: '请输入权限名称', trigger: 'blur' },
+    ],
+    permissionParentId: [
+        { required: true, message: '请选择权限类别', trigger: 'change' },
+    ],
+    permissionCode: [
+        { required: true, message: '请输入权限代码', trigger: 'blur' },
+    ],
+    permissionApi: [
+        { required: true, message: '请输入请求地址', trigger: 'blur' },
+    ],
+})
+
+import type { FormInstance } from 'element-plus'
+const formRef = ref<FormInstance>()
+
+const submit = async (formEl: FormInstance | undefined) => {
+    if (!formEl) return
+    await formEl.validate((valid, fields) => {
+        if (valid) {
+            request.post("/permission/add", form)
+                .then(resp => {
+                    if (resp.code == 200) {
+                        notice("success", "提示", resp.msg);
+                        dialog.show = false;
+                    }
+                })
+        }
+    })
+}
+
+
+import request from '@/assets/request';
+import notice from '@/assets/notice';
+
+const parentId = ref(0);
+
+const getPermission = async () => {
+    await request.get("/permission/page", { page: pagination.page, size: pagination.size })
+        .then(resp => {
+            pagination.total = resp.data.total;
+            pagination.page = resp.data.page;
+            pagination.size = resp.data.size;
+            data.data = resp.data.records;
+
+        })
+}
+
+onMounted(async () => {
+    await getPermission();
+})
+
+interface result{
+    permissionId:number;
+
+    
+    permissionName:string;
+
+   
+    permissionParentId:number;
+
+    permissionCode:string;
+
+    
+    permissionDesc:string;
+
+    
+    permissionMethod:string;
+    
+    permissionApi:string;
+
+    children?:result[];
+
+    hasChildren?:boolean;
+}
+
 </script>
 
 <template>
     <div class="menu-list-box">
-        <el-table :empty-text="'暂无数据'" :stripe="true" :data="data.data" :highlight-current-row="true" height="700px">
-            <el-table-column type="expand">
+        <el-button type="primary" @click="addpermission">添加权限</el-button>
+        <el-table :tree-props="{ children: 'children', hasChildren: 'hasChildren' }" :empty-text="'暂无数据'" :stripe="true" :data="data.data" :highlight-current-row="true"
+            height="700px">
+            <!-- <el-table-column type="expand" >
                 <template #default="props">
                     <el-card style="width:99%; margin: auto; padding-top: 10px;padding-bottom: 10px;">
-                        
-                        <el-table :empty-text="'暂无数据'" :data="props.row.child" :stripe="true" :highlight-current-row="true">
-                            <el-table-column align="center" header-align="center" prop="id" label="编号" />
-                            <el-table-column align="center" header-align="center" prop="title" label="接口名称" />
-                            <el-table-column align="center" header-align="center" prop="path" label="接口地址" />
-                            <el-table-column align="center" header-align="center" prop="method" label="请求方式" />
-                            <el-table-column align="center" header-align="center" prop="auth" label="权限" />
-                            <el-table-column align="center" header-align="center" prop="createTime" label="创建时间" />
-                            <el-table-column align="center" header-align="center" prop="type" label="权限类型" >
+                        <el-table 
+                            :empty-text="'暂无数据'" 
+                            :data="props.row.child" 
+                            :stripe="true"
+                            :highlight-current-row="true">
+                            <el-table-column align="center" header-align="center" prop="permissionId" label="编号" />
+                            <el-table-column align="center" header-align="center" prop="permissionName" label="接口名称" />
+                            <el-table-column align="center" header-align="center" prop="permissionApi" label="接口地址" />
+                            <el-table-column align="center" header-align="center" prop="permissionMethod"
+                                label="请求方式" />
+                            <el-table-column align="center" header-align="center" prop="permissionCode" label="权限" />
+                            <el-table-column align="center" header-align="center" prop="permissionParentId"
+                                label="权限类型">
                                 <template #default="scope">
-                                    <el-tag v-if="scope.row.type === 0" type="success">菜单</el-tag>
-                                    <el-tag v-else type="warning">接口</el-tag>
+                                    <el-tag v-if="scope.row.permissionParentId === 0" type="success">菜单</el-tag>
+                                    <el-tag v-else permissionParentId="warning">接口</el-tag>
                                 </template>
                             </el-table-column>
                             <el-table-column align="center" header-align="center" prop="remark" label="备注" />
@@ -72,34 +183,71 @@ const handleCurrentChange = (val: number) => {
                         </el-table>
                     </el-card>
                 </template>
+            </el-table-column> -->
+            <el-table-column align="center" header-align="center" prop="permissionId" label="编号" />
+            <el-table-column align="center" header-align="center" prop="permissionName" label="接口名称" />
+            <el-table-column align="center" header-align="center" prop="permissionApi" label="接口地址" />
+            <el-table-column align="center" header-align="center" prop="permissionMethod" label="请求方式" />
+            <el-table-column align="center" header-align="center" prop="permissionCode" label="权限" />
+            <el-table-column align="center" header-align="center" prop="permissionParentId" label="权限类型">
+                <template #default="scope">
+                    <el-tag v-if="scope.row.permissionParentId === 0" type="success">菜单</el-tag>
+                    <el-tag v-else permissionParentId="warning">接口</el-tag>
+                </template>
             </el-table-column>
-            <el-table-column align="center" header-align="center" prop="id" label="编号" />
-                <el-table-column align="center" header-align="center" prop="title" label="接口名称" />
-                <el-table-column align="center" header-align="center" prop="path" label="接口地址" />
-                <el-table-column align="center" header-align="center" prop="method" label="请求方式" />
-                <el-table-column align="center" header-align="center" prop="auth" label="权限" />
-                <el-table-column align="center" header-align="center" prop="createTime" label="创建时间" />
-                <el-table-column align="center" header-align="center" prop="type" label="权限类型" >
-                    <template #default="scope">
-                        <el-tag v-if="scope.row.type === 0" type="success">菜单</el-tag>
-                        <el-tag v-else type="warning">接口</el-tag>
-                    </template>
-                </el-table-column>
-                <el-table-column align="center" header-align="center" prop="remark" label="备注" />
-                <el-table-column align="center" header-align="center" label="操作" fixed="right" width="200">
-                    <template #default="scope">
-                        <el-button link type="primary" @click="handleEdit(scope.row)">编辑</el-button>
-                        <el-button link type="primary" @click="handleDel(scope.row)">删除</el-button>
-                    </template>
-                </el-table-column>
+            <el-table-column align="center" header-align="center" prop="remark" label="备注" />
+            <el-table-column align="center" header-align="center" label="操作" fixed="right" width="200">
+                <template #default="scope">
+                    <el-button link type="primary" @click="handleEdit(scope.row)">编辑</el-button>
+                    <el-button link type="primary" @click="handleDel(scope.row)">删除</el-button>
+                </template>
+            </el-table-column>
         </el-table>
 
-        <el-pagination v-model:current-page="data.page" v-model:page-size="data.size" small="small"
-            layout="prev, pager, next, jumper" :total="data.total" @size-change="handleSizeChange"
+        <el-pagination v-model:current-page="pagination.page" v-model:page-size="pagination.size" small="small"
+            layout="prev, pager, next, jumper" :total="pagination.total" @size-change="handleSizeChange"
             @current-change="handleCurrentChange" />
+
+        <el-dialog v-model="dialog.show" :title="dialog.title" :width="dialog.width">
+
+            <div>
+                <el-form :model="form" ref="formRef" :rules="formRule" label-width="80px">
+                    <el-form-item label="权限名称" prop="permissionName">
+                        <el-input v-model="form.permissionName"></el-input>
+                    </el-form-item>
+                    <el-form-item label="权限类型" prop="permissionParentId">
+                        <el-select v-model="form.permissionParentId" placeholder="请选择选项类型">
+                            <el-option label="权限" value="1" />
+                            <el-option label="菜单" value="0" />
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="权限代码" prop="permissionCode">
+                        <el-input v-model="form.permissionCode"></el-input>
+                    </el-form-item>
+                    <el-form-item label="请求地址" prop="permissionApi">
+                        <el-input v-model="form.permissionApi"></el-input>
+                    </el-form-item>
+                    <el-form-item label="权限描述" prop="permissionDesc">
+                        <el-input v-model="form.permissionDesc"></el-input>
+                    </el-form-item>
+                    <el-form-item label="请求方式" prop="permissionMethod">
+                        <el-input v-model="form.permissionMethod"></el-input>
+                    </el-form-item>
+
+                    <el-form-item>
+                        <div class="setting-tree-btn-box">
+                            <el-button @click="dialog.show = false">取消</el-button>
+                            <el-button type="primary" @click="submit(formRef)">
+                                提交
+                            </el-button>
+                        </div>
+                    </el-form-item>
+
+
+                </el-form>
+
+            </div>
+        </el-dialog>
     </div>
 </template>
-<style scoped>
-
-</style>
-
+<style scoped></style>

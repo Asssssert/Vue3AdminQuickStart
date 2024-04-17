@@ -9,7 +9,7 @@ const pagination = reactive({
     size: 0,
 })
 
-const data = reactive(
+const userData = reactive(
     {
         data: [{ id: 1, username: "admin", realname: "Admin", email: "admin@admin.com", phone: "13212345678", createTime: "2021-01-01 00:00:00", idcard: "43101234567890123", state: 0, lastLogin: "2024-01-01 00:00:00", lastLoginIp: "221.221.221.221", sex: 0 },
         { id: 2, username: "asssert", realname: "Admin", email: "admin@admin.com", phone: "13212345678", createTime: "2021-01-01 00:00:00", idcard: "43101234567890123", state: 0, lastLogin: "2024-01-01 00:00:00", lastLoginIp: "221.221.221.221", sex: 0 },
@@ -60,7 +60,7 @@ const dialogFormVisible = (flag: number) => {
 }
 
 const treeProps = {
-    label: 'nickname',
+    label: 'roleName',
     children: 'child'
 }
 
@@ -68,24 +68,25 @@ const searchKey = ref("")
 import { Search } from '@element-plus/icons-vue'
 import request from '@/assets/request'
 
+const getUser = async () => {
+    const userResult = await request("/user/search", { key: searchKey.value, page: 1, size: 10 })
+        .then(resp => {
+            const data = resp.data;
+            userData.data = data.records
+        })
+}
+
+const getRole = async()=>{
+    const roleResult = await request("/role/list")
+        .then(resp => {
+            const data = resp.data;
+            roleData.data = data
+        })
+}
+
 onMounted(async () => {
-    try {
-        const userResult = await request("/user/search", { key: searchKey.value, page: 1, size: 10 });
-        const data = userResult.data.data;
-
-        roleData.data = data.records
-        pagination.total = data.total
-        pagination.page = data.current
-        pagination.size = data.size
-
-        const roleResult = await request("/role/list");
-        console.log(roleResult);
-        //roleData.data = roleResult;
-
-    } catch (err) {
-        console.log('err', err);
-
-    }
+    await getUser();
+    await getRole();
 
 })
 
@@ -98,11 +99,11 @@ onMounted(async () => {
                 <el-button>搜索</el-button>
             </template>
         </el-input>
-        <el-table :empty-text="'暂无数据'" :stripe="true" :data="data.data" :highlight-current-row="true" height="700px">
+        <el-table :empty-text="'暂无数据'" :stripe="true" :data="userData.data" :highlight-current-row="true" height="700px">
             <el-table-column align="center" header-align="center" prop="userId" label="编号" />
             <el-table-column align="center" header-align="center" prop="username" label="用户名" />
             <!-- <el-table-column align="center" header-align="center" prop="realname" label="姓名" /> -->
-            <el-table-column align="center" header-align="center" prop="gender" label="性别" >
+            <el-table-column align="center" header-align="center" prop="gender" label="性别">
                 <template #default="scope">
                     <el-tag v-if="scope.row.gender == 0" type="success">男</el-tag>
                     <el-tag v-else type="danger">女</el-tag>
@@ -129,13 +130,8 @@ onMounted(async () => {
             </el-table-column>
         </el-table>
 
-        <el-pagination 
-            :current-page="pagination.page" 
-            :page-size="pagination.size" 
-            :total="pagination.total"  
-            small="small"
-            layout="prev, pager, next, jumper" 
-            @update:page-size="handleSizeChange"
+        <el-pagination :current-page="pagination.page" :page-size="pagination.size" :total="pagination.total"
+            small="small" layout="prev, pager, next, jumper" @update:page-size="handleSizeChange"
             @update:current-page="handleCurrentChange" />
 
         <el-dialog v-model="dialogVisible" title="权限" width="400">

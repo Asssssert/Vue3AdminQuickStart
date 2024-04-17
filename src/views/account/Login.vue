@@ -29,7 +29,7 @@ const onSubmit = () => {
             <template #header>
                 <div class="title">登录</div>
             </template>
-            <el-form :model="form" ef="loginForm" :rules="loginRules" label-position="left" label-width="80px"
+            <el-form :model="form" ref="loginForm" :rules="loginRules" label-position="left" label-width="80px"
                 style="width: 400px; margin: 10px auto;">
                 <el-form-item label="用户名" prop="username">
                     <el-input v-model="form.username" placeholder="请输入用户名" />
