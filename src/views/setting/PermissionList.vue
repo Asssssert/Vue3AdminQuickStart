@@ -3,8 +3,8 @@ import { reactive, ref, onMounted } from 'vue'
 
 const pagination = reactive({
     total: 0,
-    page: 0,
-    size: 0,
+    page: 1,
+    size: 50,
 })
 
 const data = reactive(
@@ -29,26 +29,8 @@ const data = reactive(
         ]
     }
 )
-const handleEdit = (row: object) => {
-    console.log(row)
-}
-
-const handleDel = (row: object) => {
-    console.log(row)
-}
 
 
-const handleSizeChange = (val: number) => {
-    console.log("handleSizeChange")
-}
-
-const handleCurrentChange = (val: number) => {
-    console.log("handleSizeChange")
-}
-
-const addpermission = () => {
-    dialog.show = true;
-}
 
 const dialog = reactive({
     title: "添加权限",
@@ -85,80 +67,97 @@ const formRule = reactive({
 import type { FormInstance } from 'element-plus'
 const formRef = ref<FormInstance>()
 
-const submit = async (formEl: FormInstance | undefined) => {
-    if (!formEl) return
-    await formEl.validate((valid, fields) => {
-        if (valid) {
-            request.post("/permission/add", form)
-                .then(resp => {
-                    if (resp.code == 200) {
-                        notice("success", "提示", resp.msg);
-                        dialog.show = false;
-                    }
-                })
-        }
-    })
-}
 
 
-import request from '@/assets/request';
+
+import http from '@/assets/http';
 import notice from '@/assets/notice';
 
-const parentId = ref(0);
 
-const getPermission = async () => {
-    await request.get("/permission/page", { page: pagination.page, size: pagination.size })
-        .then(resp => {
-            pagination.total = resp.data.total;
-            pagination.page = resp.data.page;
-            pagination.size = resp.data.size;
-            data.data = resp.data.records;
-
-        })
-}
-
-onMounted(async () => {
-    await getPermission();
+onMounted(() => {
+    func.getData();
 })
 
-interface result{
-    permissionId:number;
+const func = {
+    showDialog() {
+        dialog.title = "添加权限"
+        dialog.show = true
+    },
+    getData() {
+        http.get("/permission/page", { page: pagination.page, size: pagination.size })
+            .then((resp: any) => {
+                pagination.total = resp.data.total;
+                pagination.page = resp.data.page;
+                pagination.size = resp.data.size;
+                data.data = resp.data.records;
 
-    
-    permissionName:string;
+            })
+    },
+    submit(formEl: FormInstance | undefined) {
+        if (!formEl) return
+        formEl.validate((valid, fields) => {
+            if (valid) {
+                http.post("/permission/add", form)
+                    .then((resp: any) => {
+                        if (resp.code == 200) {
+                            notice("success", "提示", resp.msg);
+                            dialog.show = false;
+                        }
+                    })
+            }
+        })
+    },
 
-   
-    permissionParentId:number;
+    handleCurrentChange(val: number) {
+        pagination.page = val
+        func.getData();
+    },
+    handleSizeChange(val: number) {
 
-    permissionCode:string;
+    },
+    handleDel(row: object) {
+        console.log(row)
+    },
+    handleEdit(row: object) {
+        console.log(row)
+    },
+}
 
-    
-    permissionDesc:string;
+interface result {
+    permissionId: number;
 
-    
-    permissionMethod:string;
-    
-    permissionApi:string;
 
-    children?:result[];
+    permissionName: string;
 
-    hasChildren?:boolean;
+
+    permissionParentId: number;
+
+    permissionCode: string;
+
+
+    permissionDesc: string;
+
+
+    permissionMethod: string;
+
+    permissionApi: string;
+
+    children?: result[];
+
+    hasChildren?: boolean;
 }
 
 </script>
 
 <template>
     <div class="menu-list-box">
-        <el-button type="primary" @click="addpermission">添加权限</el-button>
-        <el-table :tree-props="{ children: 'children', hasChildren: 'hasChildren' }" :empty-text="'暂无数据'" :stripe="true" :data="data.data" :highlight-current-row="true"
-            height="700px">
-            <!-- <el-table-column type="expand" >
+        <el-button type="primary" @click="func.showDialog">添加权限</el-button>
+        <el-table :tree-props="{ children: 'children', hasChildren: 'hasChildren' }" :empty-text="'暂无数据'" :stripe="true"
+            :data="data.data" :highlight-current-row="true" height="700px">
+            <el-table-column type="expand">
                 <template #default="props">
                     <el-card style="width:99%; margin: auto; padding-top: 10px;padding-bottom: 10px;">
-                        <el-table 
-                            :empty-text="'暂无数据'" 
-                            :data="props.row.child" 
-                            :stripe="true"
+                        <el-table :empty-text="'暂无数据'" :data="props.row.children" :stripe="true"
                             :highlight-current-row="true">
                             <el-table-column align="center" header-align="center" prop="permissionId" label="编号" />
                             <el-table-column align="center" header-align="center" prop="permissionName" label="接口名称" />
@@ -169,21 +168,21 @@ interface result{
                             <el-table-column align="center" header-align="center" prop="permissionParentId"
                                 label="权限类型">
                                 <template #default="scope">
-                                    <el-tag v-if="scope.row.permissionParentId === 0" type="success">菜单</el-tag>
+                                    <el-tag v-if="scope.row.permissionParentId === 0" type="success">分类</el-tag>
                                     <el-tag v-else permissionParentId="warning">接口</el-tag>
                                 </template>
                             </el-table-column>
                             <el-table-column align="center" header-align="center" prop="remark" label="备注" />
                             <el-table-column align="center" header-align="center" label="操作" fixed="right" width="200">
                                 <template #default="scope">
-                                    <el-button link type="primary" @click="handleEdit(scope.row)">编辑</el-button>
-                                    <el-button link type="primary" @click="handleDel(scope.row)">删除</el-button>
+                                    <el-button link type="primary" @click="func.handleEdit(scope.row)">编辑</el-button>
+                                    <el-button link type="primary" @click="func.handleDel(scope.row)">删除</el-button>
                                 </template>
                             </el-table-column>
                         </el-table>
                     </el-card>
                 </template>
-            </el-table-column> -->
+            </el-table-column>
             <el-table-column align="center" header-align="center" prop="permissionId" label="编号" />
             <el-table-column align="center" header-align="center" prop="permissionName" label="接口名称" />
             <el-table-column align="center" header-align="center" prop="permissionApi" label="接口地址" />
@@ -191,22 +190,22 @@ interface result{
             <el-table-column align="center" header-align="center" prop="permissionCode" label="权限" />
             <el-table-column align="center" header-align="center" prop="permissionParentId" label="权限类型">
                 <template #default="scope">
-                    <el-tag v-if="scope.row.permissionParentId === 0" type="success">菜单</el-tag>
+                    <el-tag v-if="scope.row.permissionParentId === 0" type="success">分类</el-tag>
                     <el-tag v-else permissionParentId="warning">接口</el-tag>
                 </template>
             </el-table-column>
             <el-table-column align="center" header-align="center" prop="remark" label="备注" />
             <el-table-column align="center" header-align="center" label="操作" fixed="right" width="200">
                 <template #default="scope">
-                    <el-button link type="primary" @click="handleEdit(scope.row)">编辑</el-button>
-                    <el-button link type="primary" @click="handleDel(scope.row)">删除</el-button>
+                    <el-button link type="primary" @click="func.handleEdit(scope.row)">编辑</el-button>
+                    <el-button link type="primary" @click="func.handleDel(scope.row)">删除</el-button>
                 </template>
             </el-table-column>
         </el-table>
 
         <el-pagination v-model:current-page="pagination.page" v-model:page-size="pagination.size" small="small"
-            layout="prev, pager, next, jumper" :total="pagination.total" @size-change="handleSizeChange"
-            @current-change="handleCurrentChange" />
+            layout="prev, pager, next, jumper" :total="pagination.total" @size-change="func.handleSizeChange"
+            @current-change="func.handleCurrentChange" />
 
         <el-dialog v-model="dialog.show" :title="dialog.title" :width="dialog.width">
 
@@ -237,7 +236,7 @@ interface result{
                     <el-form-item>
                         <div class="setting-tree-btn-box">
                             <el-button @click="dialog.show = false">取消</el-button>
-                            <el-button type="primary" @click="submit(formRef)">
+                            <el-button type="primary" @click="func.submit(formRef)">
                                 提交
                             </el-button>
                         </div>

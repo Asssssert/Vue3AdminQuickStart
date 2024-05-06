@@ -10,8 +10,8 @@ const roleData = reactive(
 
 const pagination = reactive({
     total: 0,
-    page: 0,
-    size: 0,
+    page: 1,
+    size: 50,
 })
 
 const perData = reactive(
@@ -64,15 +64,15 @@ const menuData = reactive(
 
 const treeData = reactive({})
 
-const handleEdit = (row: object) => {
+async function handleEdit(row: object) {
     console.log(row)
 }
 
-const handleDel = (row: object) => {
+async function handleDel(row: object) {
     console.log(row)
 }
 
-const handlePermission = (val: number) => {
+async function handlePermission(val: number) {
     dialog.title = "权限"
     dialog.width = 400
     dialog.type = "permission"
@@ -80,7 +80,7 @@ const handlePermission = (val: number) => {
     dialog.show = true
 }
 
-const handleMenu = (val: number) => {
+async function handleMenu(val: number) {
     dialog.title = "菜单"
     dialog.width = 400
     dialog.type = "menu"
@@ -88,7 +88,7 @@ const handleMenu = (val: number) => {
     dialog.show = true
 }
 
-const addRole = (val: number) => {
+async function showDailog(val: number) {
     dialog.title = "添加角色"
     dialog.width = 800
     dialog.type = "role"
@@ -97,14 +97,13 @@ const addRole = (val: number) => {
 }
 
 
-const handleSizeChange = (val: number) => {
-    console.log('handleSizeChange',val)
+async function handleSizeChange(val: number) {
+    console.log('handleSizeChange', val)
 }
 
-const handleCurrentChange = (val: number) => {
+async function handleCurrentChange(val: number) {
     pagination.page = val
-    getRole();
-    console.log(val)
+    await getData();
 }
 
 
@@ -133,54 +132,59 @@ const dialogFormVisible = (flag: number) => {
     dialog.show = false
 }
 
-import request from '@/assets/request';
+import http from '@/assets/http';
 
-const getRole = async() => {
-    await request.get("/role/page", { page: pagination.page, size: pagination.size }).then(resp => {
-        roleData.data = resp.data.records
-        pagination.total = resp.data.total
-        pagination.page = resp.data.current
-        pagination.size = resp.data.size
-    });
+async function getData() {
+    const resp: any = await http.get("/role/page", { page: pagination.page, size: pagination.size })
+    roleData.data = resp.data.records
+    pagination.total = resp.data.total
+    pagination.page = resp.data.current
+    pagination.size = resp.data.size
+
 }
-
+// 组件挂载后执行的方法
 onMounted(async () => {
-    const result =  getRole();
+    await getData()
 })
-
-
 
 const form = reactive({
     roleName: "",
     roleDescription: ""
 })
 
-const formRule = reactive({
+const formRule = {
     roleName: [
         { required: true, message: '请输入角色名称', trigger: 'blur' },
     ],
-})
+}
 
 
 
 import notice from '@/assets/notice'
 
-const submit = async () => {
-    const result = request.post("/role/add", form)
-    if (result.code == 200) {
-        dialog.show = false;
-        notice('success', '消息', result.msg)
-        await getRole()
-    }
-    //console.log(result);
+async function submit(formEl: any) {
+    if (!formEl) return
+    await formEl.validate(async (valid: any, fields: any) => {
+        if (valid) {
+            const resp: any = http.post("/role/add", form)
+            if (resp.code === 200) {
+                notice("success", "提示", resp.msg);
+                dialog.show = false;
+                await getData();
+            } else {
+                notice("error", "提示", resp.msg);
+            }
 
-    //console.log(form);
+        }
+    })
 }
+
+
 
 </script>
 
 <template>
-    <el-button type="primary" @click="addRole">添加角色</el-button>
+    <el-button type="primary" @click="showDailog">添加角色</el-button>
     <div class="menu-list-box">
 
         <el-table :empty-text="'暂无数据'" :stripe="true" :data="roleData.data" :highlight-current-row="true"
