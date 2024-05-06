@@ -44,54 +44,52 @@ import http from '@/assets/http'
 
 
 onMounted(async () => {
-    func.getData();
-
+    getData();
 })
 
-const func = {
-    showDialog(flag: number) {
-        if (flag == 1) {
-            const checkPerId = settingTree.value.getCheckedKeys()
-            console.log(checkPerId);
-        }
-        dialogVisible.value = false
-    },
-    getData() {
-        http.get("/user/search", { key: searchKey.value, page: 1, size: 10 })
-            .then((resp: any) => {
-                const data = resp.data;
-                userData.data = data.records
-                pagination.total = resp.data.total
-                pagination.page = resp.data.current
-                pagination.size = resp.data.size
-            })
-    },
-    getRole() {
-        http.get("/role/list")
-            .then((resp: any) => {
-                const data = resp.data;
-                roleData.data = data
-            })
-    },
+
+async function showDialog(flag: number) {
+    if (flag == 1) {
+        const checkPerId = settingTree.value.getCheckedKeys()
+        console.log(checkPerId);
+    }
+    dialogVisible.value = false
+}
+async function getData() {
+    http.get("/user/search", { key: searchKey.value, page: 1, size: 10 })
+        .then((resp: any) => {
+            const data = resp.data;
+            userData.data = data.records
+            pagination.total = resp.data.total
+            pagination.page = resp.data.current
+            pagination.size = resp.data.size
+        })
+}
+async function getRole() {
+    http.get("/role/list")
+        .then((resp: any) => {
+            const data = resp.data;
+            roleData.data = data
+        })
+}
 
 
-    handleCurrentChange(val: number) {
-        pagination.page = val
-        func.getData();
-    },
-    handleSizeChange(val: number) {
+async function handleCurrentChange(val: number) {
+    pagination.page = val
+    getData();
+}
+async function handleSizeChange(val: number) {
 
-    },
-    handleDel(row: object) {
-        console.log(row)
-    },
-    handleEdit(row: object) {
-        console.log(row)
-    },
-    handleRole(row: object) {
-        this.getRole()
-        dialogVisible.value = true
-    },
+}
+async function handleDel(row: object) {
+    console.log(row)
+}
+async function handleEdit(row: object) {
+    console.log(row)
+}
+async function handleRole(row: object) {
+    getRole()
+    dialogVisible.value = true
 }
 
 </script>
@@ -128,22 +126,22 @@ const func = {
             </el-table-column>
             <el-table-column align="center" header-align="center" label="操作" fixed="right" width="200">
                 <template #default="scope">
-                    <el-button link type="primary" @click="func.handleRole(scope.row)">角色</el-button>
-                    <el-button link type="primary" @click="func.handleEdit(scope.row)">编辑</el-button>
-                    <el-button link type="primary" @click="func.handleDel(scope.row)">删除</el-button>
+                    <el-button link type="primary" @click="handleRole(scope.row)">角色</el-button>
+                    <el-button link type="primary" @click="handleEdit(scope.row)">编辑</el-button>
+                    <el-button link type="primary" @click="handleDel(scope.row)">删除</el-button>
                 </template>
             </el-table-column>
         </el-table>
 
         <el-pagination :current-page="pagination.page" :page-size="pagination.size" :total="pagination.total"
-            small="small" layout="prev, pager, next, jumper" @update:page-size="func.handleSizeChange"
-            @update:current-page="func.handleCurrentChange" />
+            small="small" layout="prev, pager, next, jumper" @update:page-size="handleSizeChange"
+            @update:current-page="handleCurrentChange" />
 
         <el-dialog v-model="dialogVisible" title="权限" width="400">
             <el-tree ref="settingTree" :data="roleData.data" :props="treeProps" node-key="id" show-checkbox />
             <div class="setting-tree-btn-box">
-                <el-button @click="func.showDialog(0)">取消</el-button>
-                <el-button type="primary" @click="func.showDialog(1)">
+                <el-button @click="showDialog(0)">取消</el-button>
+                <el-button type="primary" @click="showDialog(1)">
                     提交
                 </el-button>
             </div>

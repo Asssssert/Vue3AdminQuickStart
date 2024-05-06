@@ -74,84 +74,62 @@ import http from '@/assets/http';
 import notice from '@/assets/notice';
 
 
-onMounted(() => {
-    func.getData();
+// 组件挂载后执行的方法
+onMounted(async () => {
+    await getData()
 })
 
-const func = {
-    showDialog() {
-        dialog.title = "添加权限"
-        dialog.show = true
-    },
-    getData() {
-        http.get("/permission/page", { page: pagination.page, size: pagination.size })
-            .then((resp: any) => {
-                pagination.total = resp.data.total;
-                pagination.page = resp.data.page;
-                pagination.size = resp.data.size;
-                data.data = resp.data.records;
 
-            })
-    },
-    submit(formEl: FormInstance | undefined) {
-        if (!formEl) return
-        formEl.validate((valid, fields) => {
-            if (valid) {
-                http.post("/permission/add", form)
-                    .then((resp: any) => {
-                        if (resp.code == 200) {
-                            notice("success", "提示", resp.msg);
-                            dialog.show = false;
-                        }
-                    })
-            }
+async function showDialog() {
+    dialog.title = "添加权限"
+    dialog.show = true
+}
+async function getData() {
+    http.get("/permission/page", { page: pagination.page, size: pagination.size })
+        .then((resp: any) => {
+            pagination.total = resp.data.total;
+            pagination.page = resp.data.page;
+            pagination.size = resp.data.size;
+            data.data = resp.data.records;
+
         })
-    },
-
-    handleCurrentChange(val: number) {
-        pagination.page = val
-        func.getData();
-    },
-    handleSizeChange(val: number) {
-
-    },
-    handleDel(row: object) {
-        console.log(row)
-    },
-    handleEdit(row: object) {
-        console.log(row)
-    },
+}
+async function submit(formEl: FormInstance | undefined) {
+    if (!formEl) return
+    formEl.validate((valid, fields) => {
+        if (valid) {
+            http.post("/permission/add", form)
+                .then((resp: any) => {
+                    if (resp.code == 200) {
+                        notice("success", "提示", resp.msg);
+                        dialog.show = false;
+                    }
+                })
+        }
+    })
 }
 
-interface result {
-    permissionId: number;
-
-
-    permissionName: string;
-
-
-    permissionParentId: number;
-
-    permissionCode: string;
-
-
-    permissionDesc: string;
-
-
-    permissionMethod: string;
-
-    permissionApi: string;
-
-    children?: result[];
-
-    hasChildren?: boolean;
+async function handleCurrentChange(val: number) {
+    pagination.page = val
+    getData();
 }
+async function handleSizeChange(val: number) {
+
+}
+async function handleDel(row: object) {
+    console.log(row)
+}
+async function handleEdit(row: object) {
+    console.log(row)
+}
+
+
 
 </script>
 
 <template>
     <div class="menu-list-box">
-        <el-button type="primary" @click="func.showDialog">添加权限</el-button>
+        <el-button type="primary" @click="showDialog">添加权限</el-button>
         <el-table :tree-props="{ children: 'children', hasChildren: 'hasChildren' }" :empty-text="'暂无数据'" :stripe="true"
             :data="data.data" :highlight-current-row="true" height="700px">
             <el-table-column type="expand">
@@ -175,8 +153,8 @@ interface result {
                             <el-table-column align="center" header-align="center" prop="remark" label="备注" />
                             <el-table-column align="center" header-align="center" label="操作" fixed="right" width="200">
                                 <template #default="scope">
-                                    <el-button link type="primary" @click="func.handleEdit(scope.row)">编辑</el-button>
-                                    <el-button link type="primary" @click="func.handleDel(scope.row)">删除</el-button>
+                                    <el-button link type="primary" @click="handleEdit(scope.row)">编辑</el-button>
+                                    <el-button link type="primary" @click="handleDel(scope.row)">删除</el-button>
                                 </template>
                             </el-table-column>
                         </el-table>
@@ -197,15 +175,15 @@ interface result {
             <el-table-column align="center" header-align="center" prop="remark" label="备注" />
             <el-table-column align="center" header-align="center" label="操作" fixed="right" width="200">
                 <template #default="scope">
-                    <el-button link type="primary" @click="func.handleEdit(scope.row)">编辑</el-button>
-                    <el-button link type="primary" @click="func.handleDel(scope.row)">删除</el-button>
+                    <el-button link type="primary" @click="handleEdit(scope.row)">编辑</el-button>
+                    <el-button link type="primary" @click="handleDel(scope.row)">删除</el-button>
                 </template>
             </el-table-column>
         </el-table>
 
         <el-pagination v-model:current-page="pagination.page" v-model:page-size="pagination.size" small="small"
-            layout="prev, pager, next, jumper" :total="pagination.total" @size-change="func.handleSizeChange"
-            @current-change="func.handleCurrentChange" />
+            layout="prev, pager, next, jumper" :total="pagination.total" @size-change="handleSizeChange"
+            @current-change="handleCurrentChange" />
 
         <el-dialog v-model="dialog.show" :title="dialog.title" :width="dialog.width">
 
@@ -236,7 +214,7 @@ interface result {
                     <el-form-item>
                         <div class="setting-tree-btn-box">
                             <el-button @click="dialog.show = false">取消</el-button>
-                            <el-button type="primary" @click="func.submit(formRef)">
+                            <el-button type="primary" @click="submit(formRef)">
                                 提交
                             </el-button>
                         </div>
