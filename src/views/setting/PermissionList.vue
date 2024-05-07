@@ -7,6 +7,8 @@ const pagination = reactive({
     size: 50,
 })
 
+const permissionOptions = ref([{ permissionId: 0, permissionName: "权限菜单" }])
+
 const data = reactive(
     {
         data: [
@@ -41,8 +43,9 @@ const dialog = reactive({
 })
 
 const form = reactive({
+    permissionId: 0,
     permissionName: "",
-    permissionParentId: "1",
+    permissionParentId: 0,
     permissionCode: "",
     permissionDesc: "",
     permissionMethod: "",
@@ -77,12 +80,22 @@ import notice from '@/assets/notice';
 // 组件挂载后执行的方法
 onMounted(async () => {
     await getData()
+    await getPerByParentId();
 })
 
 
 async function showDialog() {
     dialog.title = "添加权限"
     dialog.show = true
+    dialog.type = "add"
+    form.permissionId = 0
+    form.permissionName = ""
+    form.permissionParentId = 0
+    form.permissionApi = ""
+    form.permissionCode = ""
+    form.permissionMethod = ""
+
+
 }
 async function getData() {
     http.get("/permission/page", { page: pagination.page, size: pagination.size })
@@ -98,29 +111,76 @@ async function submit(formEl: FormInstance | undefined) {
     if (!formEl) return
     formEl.validate((valid, fields) => {
         if (valid) {
-            http.post("/permission/add", form)
-                .then((resp: any) => {
-                    if (resp.code == 200) {
-                        notice("success", "提示", resp.msg);
-                        dialog.show = false;
-                    }
-                })
+            if (dialog.type == "add") {
+                add(form)
+            }
+            if (dialog.type == "update") {
+                update(form)
+            }
         }
     })
 }
 
+async function add(formData: any) {
+    const resp: any = await http.post("/permission/add", formData)
+    if (resp.code == 200) {
+        notice("success", "提示", resp.msg);
+        dialog.show = false;
+        getData()
+    }
+}
+
+async function update(formData: any) {
+    const resp: any = await http.post("/permission/upd", formData)
+    if (resp.code == 200) {
+        notice("success", "提示", resp.msg);
+        dialog.show = false;
+        getData()
+    }
+}
+
 async function handleCurrentChange(val: number) {
     pagination.page = val
-    getData();
+    await getData();
+
 }
 async function handleSizeChange(val: number) {
 
 }
 async function handleDel(row: object) {
-    console.log(row)
+    const resp = await http.delete("/permission/" + row.permissionId);
+    if (resp.code == 200) {
+        getData()
+        notice("success", "提示", resp.msg)
+    }
 }
 async function handleEdit(row: object) {
-    console.log(row)
+    dialog.title = "编辑权限"
+    dialog.type = "update"
+    dialog.show = true
+
+    const resp: any = await http.get("/permission/" + row.permissionId)
+    if (resp.code == 200) {
+        let respData = resp.data
+        form.permissionId = respData.permissionId
+        form.permissionApi = respData.permissionApi
+        form.permissionCode = respData.permissionCode
+        form.permissionDesc = respData.permissionDesc
+        form.permissionName = respData.permissionName
+        form.permissionMethod = respData.permissionMethod
+        form.permissionParentId = respData.permissionParentId
+
+    }
+    
+}
+/**
+ * 根据父权限ID获取子权限
+ */
+async function getPerByParentId() {
+    const resp: any = await http.get("/permission/page/parentId", { parentId: 0, page: 1, size: 999 })
+    if (resp.code === 200) {
+        permissionOptions.value = [...permissionOptions.value, ...resp.data.records]
+    }
 }
 
 
@@ -186,7 +246,6 @@ async function handleEdit(row: object) {
             @current-change="handleCurrentChange" />
 
         <el-dialog v-model="dialog.show" :title="dialog.title" :width="dialog.width">
-
             <div>
                 <el-form :model="form" ref="formRef" :rules="formRule" label-width="80px">
                     <el-form-item label="权限名称" prop="permissionName">
@@ -194,8 +253,8 @@ async function handleEdit(row: object) {
                     </el-form-item>
                     <el-form-item label="权限类型" prop="permissionParentId">
                         <el-select v-model="form.permissionParentId" placeholder="请选择选项类型">
-                            <el-option label="权限" value="1" />
-                            <el-option label="菜单" value="0" />
+                            <el-option :label="item.permissionName" :key="index" :value='item.permissionId'
+                                v-for="(item, index) in permissionOptions" />
                         </el-select>
                     </el-form-item>
                     <el-form-item label="权限代码" prop="permissionCode">
@@ -219,10 +278,7 @@ async function handleEdit(row: object) {
                             </el-button>
                         </div>
                     </el-form-item>
-
-
                 </el-form>
-
             </div>
         </el-dialog>
     </div>

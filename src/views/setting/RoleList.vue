@@ -65,11 +65,25 @@ const menuData = reactive(
 const treeData = reactive({})
 
 async function handleEdit(row: object) {
-    console.log(row)
+    dialog.title = "编辑角色"
+    dialog.type = "update"
+    dialog.show = true
+
+    const resp: any = await http.get("/role/" + row.roleId)
+    if (resp.code == 200) {
+        let respData = resp.data
+        form.roleId = respData.roleId
+        form.roleName = respData.roleName
+        form.roleDescription = respData.roleDescription
+    }
 }
 
 async function handleDel(row: object) {
-    console.log(row)
+    const resp = await http.delete("/role/" + row.roleId);
+    if (resp.code == 200) {
+        getData()
+        notice("success", "提示", resp.msg)
+    }
 }
 
 async function handlePermission(val: number) {
@@ -91,8 +105,7 @@ async function handleMenu(val: number) {
 async function showDailog(val: number) {
     dialog.title = "添加角色"
     dialog.width = 800
-    dialog.type = "role"
-
+    dialog.type = "add"
     dialog.show = true
 }
 
@@ -148,6 +161,7 @@ onMounted(async () => {
 })
 
 const form = reactive({
+    roleId: 0,
     roleName: "",
     roleDescription: ""
 })
@@ -162,21 +176,44 @@ const formRule = {
 
 import notice from '@/assets/notice'
 
-async function submit(formEl: any) {
-    if (!formEl) return
-    await formEl.validate(async (valid: any, fields: any) => {
-        if (valid) {
-            const resp: any = http.post("/role/add", form)
-            if (resp.code === 200) {
-                notice("success", "提示", resp.msg);
-                dialog.show = false;
-                await getData();
-            } else {
-                notice("error", "提示", resp.msg);
-            }
 
+import type { FormInstance } from 'element-plus'
+const formRef = ref<FormInstance>()
+
+async function submit(formEl: FormInstance | undefined) {
+    if (!formEl) return
+    formEl.validate((valid, fields) => {
+        if (valid) {
+            if (dialog.type == "add") {
+                add(form)
+            }
+            if (dialog.type == "update") {
+                update(form)
+            }
         }
     })
+}
+
+async function add(formData: any) {
+    const resp: any = await http.post("/role/add", formData)
+    if (resp.code === 200) {
+        notice("success", "提示", resp.msg);
+        dialog.show = false;
+        await getData();
+    } else {
+        notice("error", "提示", resp.msg);
+    }
+}
+
+async function update(formData: any) {
+    const resp: any = await http.post("/role/upd", formData)
+    if (resp.code === 200) {
+        notice("success", "提示", resp.msg);
+        dialog.show = false;
+        await getData();
+    } else {
+        notice("error", "提示", resp.msg);
+    }
 }
 
 
@@ -206,7 +243,7 @@ async function submit(formEl: any) {
             @update:current-page="handleCurrentChange" />
 
         <el-dialog v-model="dialog.show" :title="dialog.title" :width="dialog.width">
-            <div class="dialog-show-box" v-if="dialog.type != 'role'">
+            <div class="dialog-show-box" v-if="dialog.type == 'menu' || dialog.type == 'permission'">
                 <el-tree ref="settingTree" :data="treeData.value.data" :props="treeProps" node-key="id" show-checkbox />
                 <div class="setting-tree-btn-box">
                     <el-button @click="dialogFormVisible(0)">取消</el-button>
@@ -216,7 +253,7 @@ async function submit(formEl: any) {
                 </div>
             </div>
             <div v-else>
-                <el-form :model="form" :rules="formRule" label-width="80px">
+                <el-form :model="form" ref="formRef" :rules="formRule" label-width="80px">
                     <el-form-item label="角色名称" prop="roleName">
                         <el-input v-model="form.roleName"></el-input>
                     </el-form-item>
@@ -226,7 +263,7 @@ async function submit(formEl: any) {
                 </el-form>
                 <div class="setting-tree-btn-box">
                     <el-button @click="dialog.show = false">取消</el-button>
-                    <el-button type="primary" @click="submit">
+                    <el-button type="primary" @click="submit(formRef)">
                         提交
                     </el-button>
                 </div>

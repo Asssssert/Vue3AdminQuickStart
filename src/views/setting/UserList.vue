@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue'
 import { ElTree } from 'element-plus'
+// 弹窗
+const dialog = reactive({
+    title: "",
+    show: false,
+    width: 400,
+    type: "",
+
+})
 
 const pagination = reactive({
     total: 0,
@@ -10,10 +18,7 @@ const pagination = reactive({
 
 const userData = reactive(
     {
-        data: [
-            { id: 1, username: "admin", realname: "Admin", email: "admin@admin.com", phone: "13212345678", createTime: "2021-01-01 00:00:00", idcard: "43101234567890123", state: 0, lastLogin: "2024-01-01 00:00:00", lastLoginIp: "221.221.221.221", sex: 0 },
-            { id: 2, username: "asssert", realname: "Admin", email: "admin@admin.com", phone: "13212345678", createTime: "2021-01-01 00:00:00", idcard: "43101234567890123", state: 0, lastLogin: "2024-01-01 00:00:00", lastLoginIp: "221.221.221.221", sex: 0 },
-            { id: 3, username: "lei", realname: "Admin", email: "admin@admin.com", phone: "13212345678", createTime: "2021-01-01 00:00:00", idcard: "43101234567890123", state: 0, lastLogin: "2024-01-01 00:00:00", lastLoginIp: "221.221.221.221", sex: 0 },]
+        data: []
     }
 )
 
@@ -26,8 +31,6 @@ const roleData = reactive(
     }
 )
 
-//dialog
-const dialogVisible = ref(false)
 const settingTree = ref<InstanceType<typeof ElTree>>()
 
 
@@ -39,12 +42,41 @@ const treeProps = {
 const searchKey = ref("")
 import { Search } from '@element-plus/icons-vue'
 import http from '@/assets/http'
+import notice from '@/assets/notice';
 
 
+//表单
+const form = reactive({
+    userId: 0,
+    username: "",
+    email: "",
+    phoneNumber: "",
+    gender: 0,
+    state: 0
+})
+
+const formRule = {
+    username: [
+        { required: true, message: '请输入用户名', trigger: 'blur' },
+    ],
+    email: [
+        { required: true, message: '请输入邮箱', trigger: 'blur' },
+        { type: 'email', message: '请输入邮箱', trigger: 'blur' },
+    ],
+    phoneNumber: [
+        { required: true, message: '请输入电话号码', trigger: 'blur' },
+    ],
+    gender: [
+        { required: true, message: '请选择性别', trigger: 'change' },
+    ],
+    state: [
+        { required: true, message: '请选择状态', trigger: 'change' },
+    ],
+}
 
 
 onMounted(async () => {
-    getData();
+    await getData();
 })
 
 
@@ -53,7 +85,7 @@ async function showDialog(flag: number) {
         const checkPerId = settingTree.value.getCheckedKeys()
         console.log(checkPerId);
     }
-    dialogVisible.value = false
+    dialog.show = false
 }
 async function getData() {
     http.get("/user/search", { key: searchKey.value, page: 1, size: 10 })
@@ -82,14 +114,75 @@ async function handleSizeChange(val: number) {
 
 }
 async function handleDel(row: object) {
-    console.log(row)
+    const resp = await http.delete("/user/" + row.userId);
+    if (resp.code == 200) {
+        getData()
+        notice("success", "提示", resp.msg)
+    }
 }
 async function handleEdit(row: object) {
-    console.log(row)
+    dialog.show = true
+    dialog.type = "update"
+    dialog.title = "编辑用户"
+    dialog.width = 800
+    const resp: any = await http.get("/user/" + row.userId)
+    if (resp.code == 200) {
+        let respdata = resp.data
+        form.userId = respdata.userId
+        form.email = respdata.email
+        form.gender = respdata.gender
+        form.phoneNumber = respdata.phoneNumber
+        form.username = respdata.username
+    }
+
+
 }
 async function handleRole(row: object) {
     getRole()
-    dialogVisible.value = true
+    dialog.show = true
+    dialog.type = "role"
+    dialog.width = 400
+    dialog.title = "编辑角色"
+
+}
+
+import type { FormInstance } from 'element-plus'
+const formRef = ref<FormInstance>()
+
+async function submit(formEl: FormInstance | undefined) {
+    if (!formEl) return
+    formEl.validate((valid, fields) => {
+        if (valid) {
+            if (dialog.type == "add") {
+                add(form)
+            }
+            if (dialog.type == "update") {
+                update(form)
+            }
+        }
+    })
+}
+
+async function add(formData: any) {
+    const resp: any = await http.post("/user/add", formData)
+    if (resp.code === 200) {
+        notice("success", "提示", resp.msg);
+        dialog.show = false;
+        await getData();
+    } else {
+        notice("error", "提示", resp.msg);
+    }
+}
+
+async function update(formData: any) {
+    const resp: any = await http.put("/user/"+formData.userId, formData)
+    if (resp.code === 200) {
+        notice("success", "提示", resp.msg);
+        dialog.show = false;
+        await getData();
+    } else {
+        notice("error", "提示", resp.msg);
+    }
 }
 
 </script>
@@ -137,11 +230,31 @@ async function handleRole(row: object) {
             small="small" layout="prev, pager, next, jumper" @update:page-size="handleSizeChange"
             @update:current-page="handleCurrentChange" />
 
-        <el-dialog v-model="dialogVisible" title="权限" width="400">
-            <el-tree ref="settingTree" :data="roleData.data" :props="treeProps" node-key="id" show-checkbox />
-            <div class="setting-tree-btn-box">
+        <el-dialog v-model="dialog.show" :title="dialog.title" :width="dialog.width">
+            <el-tree v-if="dialog.type == 'role'" ref="settingTree" :data="roleData.data" :props="treeProps"
+                node-key="id" show-checkbox />
+            <div class="setting-tree-btn-box" v-if="dialog.type == 'add' || dialog.type == 'update'">
+                <el-form :model="form" ref="formRef" :rules="formRule" label-width="80px">
+                    <el-form-item label="用户名" prop="username">
+                        <el-input v-model="form.username"></el-input>
+                    </el-form-item>
+                    <el-form-item label="性别" prop="gender">
+                        <el-select v-model="form.gender" placeholder="请选择性别">
+                            <el-option label="男" :value='0' />
+                            <el-option label="女" :value='1' />
+                            <el-option label="其他" :value='2' />
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="邮箱" prop="email">
+                        <el-input v-model="form.email"></el-input>
+                    </el-form-item>
+                    <el-form-item label="电话号码" prop="phoneNumber">
+                        <el-input v-model="form.phoneNumber"></el-input>
+                    </el-form-item>
+
+                </el-form>
                 <el-button @click="showDialog(0)">取消</el-button>
-                <el-button type="primary" @click="showDialog(1)">
+                <el-button type="primary" @click="submit(formRef)">
                     提交
                 </el-button>
             </div>

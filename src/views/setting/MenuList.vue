@@ -23,6 +23,7 @@ const dialog = reactive({
 })
 
 const form = reactive({
+    menuId: 0,
     menuName: "",
     menuPath: "",
     parentMenuId: 0,
@@ -48,7 +49,13 @@ const formRef = ref()
 /**
  * 显示对话框
  */
-async function showDialog() {
+async function showDialog(flag: number) {
+    dialog.title = "添加菜单"
+    dialog.type = "add"
+    form.menuName = ""
+    form.menuPath = ""
+    form.parentMenuId = 0
+    form.menuIcon = ""
     dialog.show = true
 }
 
@@ -60,16 +67,36 @@ async function submit(formEl: any) {
     if (!formEl) return
     await formEl.validate(async (valid: any, fields: any) => {
         if (valid) {
-            const resp = await http.post("/menu/add", form)
-            if (resp.code === 200) {
-                notice("success", "提示", resp.msg);
-                dialog.show = false;
-                await getData();
-            } else {
-                notice("error", "提示", resp.msg);
+            if (dialog.type == "add"){
+                add(form)
+            }
+            if (dialog.type == "update"){
+                upd(form)
             }
         }
     })
+}
+
+async function add(formData: any) {
+    const resp = await http.post("/menu/add", formData)
+    if (resp.code === 200) {
+        notice("success", "提示", resp.msg);
+        dialog.show = false;
+        await getData();
+    } else {
+        notice("error", "提示", resp.msg);
+    }
+}
+
+async function upd(formData: any) {
+    const resp = await http.post("/menu/upd", formData)
+    if (resp.code === 200) {
+        notice("success", "提示", resp.msg);
+        dialog.show = false;
+        await getData();
+    } else {
+        notice("error", "提示", resp.msg);
+    }
 }
 
 /**
@@ -115,7 +142,11 @@ function handleSizeChange(val: number) {
  * @param row 菜单项行数据
  */
 async function handleDel(row: object) {
-    console.log(row)
+    const resp = await http.delete("/menu/" + row.menuId);
+    if (resp.code === 200) {
+        getData()
+        notice("success", "提示", resp.msg)
+    }
 }
 
 /**
@@ -123,13 +154,27 @@ async function handleDel(row: object) {
  * @param row 菜单项行数据
  */
 async function handleEdit(row: object) {
-    console.log(row)
+    dialog.title = "编辑菜单"
+    dialog.type = "update"
+    dialog.show = true
+
+    const resp: any = await http.get("/menu/" + row.menuId)
+    if (resp.code == 200) {
+        let respData = resp.data
+        form.menuId = respData.menuId
+        form.menuIcon = respData.menuIcon
+        form.menuName = respData.menuName
+        form.menuPath = respData.menuPath
+        form.parentMenuId = respData.parentMenuId
+    }
+
 }
+
 
 // 组件挂载后执行的方法
 onMounted(async () => {
     await getData()
-    await getMenuByParentId()
+    await getMenuByParentId();
 })
 
 </script>
@@ -141,7 +186,7 @@ onMounted(async () => {
             <el-table-column type="expand">
                 <template #default="props">
                     <el-card style="width:99%; margin: auto; padding-top: 10px;padding-bottom: 10px;">
-                        <el-table :empty-text="'暂无数据'" :data="props.row.child" :stripe="true"
+                        <el-table :empty-text="'暂无数据'" :data="props.row.children" :stripe="true"
                             :highlight-current-row="true">
                             <el-table-column align="center" header-align="center" prop="menuId" label="编号" />
                             <el-table-column align="center" header-align="center" prop="menuName" label="标题" />
