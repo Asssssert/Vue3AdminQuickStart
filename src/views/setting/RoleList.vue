@@ -14,57 +14,27 @@ const pagination = reactive({
     size: 50,
 })
 
-const perData = reactive(
-    {
-        total: 50, page: 1, size: 10,
-        data: [
-            {
-                id: 1, title: "公有权限", api: "public", method: "", parentId: 0, per: "", createTime: '', type: 0, remark: "", child: [
-                    { id: 2, title: "登录", api: "/public/login", per: "auth", method: "POST", parentId: 1, createTime: '', type: 1, remark: "", child: [] },
-                    { id: 3, title: "注销", api: "/public/logout", per: "auth", method: "GET", parentId: 1, createTime: '', type: 1, remark: "", child: [] },
-                    { id: 4, title: "获取自身基本信息", api: "/public/get/info", per: "auth", method: "GET", parentId: 1, createTime: '', type: 1, remark: "", child: [] },
-                    { id: 5, title: "修改自身基本信息", api: "/public/get/info", per: "auth", method: "POST", parentId: 1, createTime: '', type: 1, remark: "", child: [] },
-                ]
-            },
-            {
-                id: 6, title: "用户权限", api: "user", method: "", parentId: 0, createTime: '', type: 0, remark: "", child: [
-                    { id: 7, title: "根据ID获取用户信息", api: "/user/get/*", per: "user:get", method: "GET", parentId: 6, createTime: '', type: 1, remark: "", child: [] },
-                    { id: 8, title: "分页查找用户列表", api: "/user/page", per: "user:page", method: "GET", parentId: 6, createTime: '', type: 1, remark: "", child: [] },
-                    { id: 9, title: "根据ID修改用户信息", api: "/user/upd", per: "user:upd", method: "POST", parentId: 6, createTime: '', type: 1, remark: "", child: [] },
-                    { id: 10, title: "根据ID删除用户", api: "/user/del/*", per: "user:del", method: "GET", parentId: 6, createTime: '', type: 1, remark: "", child: [] },
-                ]
-            }
-        ]
-    }
-)
+const treePermissionData =reactive({
+    data:[]
+})
+const treeMenuData =reactive({
+    data:[]
+})
+const treePermissionProps = {
+    id: 'permissionId',
+    value: 'permissionId',
+    label: 'permissionName',
+    children: 'children'
+}
 
-const menuData = reactive(
-    {
-        total: 50, page: 1, size: 10,
-        data: [
-            {
-                id: 1, title: '主页', path: "index", icon: "", child: [
-                    { id: 2, icon: "", title: "大屏", path: "/home/index" },
-                ],
+const treeMenuProps = {
+    id: 'menuId',
+    value: 'menuId',
+    label: 'menuName',
+    children: 'children'
+}
 
-            },
-            {
-                id: 5, icon: "", title: "系统设置", path: "setting", child: [
-                    { id: 6, icon: "", title: "用户列表", path: "/home/userList" },
-                    { id: 7, icon: "", title: "角色列表", path: "/home/roleList" },
-                    { id: 8, icon: "", title: "权限列表", path: "/home/permissionList" },
-                    { id: 9, icon: "", title: "菜单列表", path: "/home/menuList" },
-
-                ]
-            }
-
-        ]
-    }
-)
-
-const treeData = reactive({})
-
-async function handleEdit(row: object) {
+async function handleEdit(row: any) {
     dialog.title = "编辑角色"
     dialog.type = "update"
     dialog.show = true
@@ -78,7 +48,7 @@ async function handleEdit(row: object) {
     }
 }
 
-async function handleDel(row: object) {
+async function handleDel(row: any) {
     const resp = await http.delete("/role/" + row.roleId);
     if (resp.code == 200) {
         getData()
@@ -86,23 +56,21 @@ async function handleDel(row: object) {
     }
 }
 
-async function handlePermission(val: number) {
-    dialog.title = "权限"
-    dialog.width = 400
-    dialog.type = "permission"
-    treeData.value = perData
-    dialog.show = true
+async function handlePermission(val: any) {
+    dialog.id = val.roleId
+    await getPermissions()
+    await getPermissionIds()
+
 }
 
-async function handleMenu(val: number) {
-    dialog.title = "菜单"
-    dialog.width = 400
-    dialog.type = "menu"
-    treeData.value = menuData
-    dialog.show = true
+
+async function handleMenu(val: any) {
+    dialog.id = val.roleId
+    await getMenu()
+    await getMenuIds()
 }
 
-async function showDailog(val: number) {
+async function showDialog(val: any) {
     dialog.title = "添加角色"
     dialog.width = 800
     dialog.type = "add"
@@ -120,12 +88,9 @@ async function handleCurrentChange(val: number) {
 }
 
 
-const treeProps = {
-    label: 'title',
-    children: 'child'
-}
 
-const settingTree = ref<InstanceType<typeof ElTree>>()
+
+const treeRef = ref<InstanceType<typeof ElTree>>()
 
 
 const dialog = reactive({
@@ -133,15 +98,33 @@ const dialog = reactive({
     show: false,
     width: 400,
     type: "",
+    id:0,
 
 })
 
-const dialogFormVisible = (flag: number) => {
 
-    if (flag == 1) {
-        const checkPerId = settingTree.value.getCheckedKeys()
-        console.log(checkPerId);
+
+async function dialogFormVisible  (flag: number)  {
+    if(flag==1){
+        if(dialog.type=="permission"){
+        let nodeData ={roleId:dialog.id,permissionIds:treeRef.value!.getCheckedKeys(false)}
+        const resp = await http.post("/role/upd/permission", nodeData)
+        if (resp.code == 200) {
+            notice("success", "提示", resp.msg)
+        }
     }
+
+        if(dialog.type=="menu"){
+            let nodeData ={roleId:dialog.id,menuIds:treeRef.value!.getCheckedKeys(false)}
+            const resp = await http.post("/role/upd/menu", nodeData)
+            if (resp.code == 200) {
+                console.log(resp);
+                notice("success", "提示", resp.msg)
+            }
+        }
+    }
+    
+
     dialog.show = false
 }
 
@@ -172,11 +155,7 @@ const formRule = {
     ],
 }
 
-
-
 import notice from '@/assets/notice'
-
-
 import type { FormInstance } from 'element-plus'
 const formRef = ref<FormInstance>()
 
@@ -217,11 +196,44 @@ async function update(formData: any) {
 }
 
 
+ async function getPermissions() {
+    const resp: any = await http.get("/permission/page", {  page: 1, size: 999 })
+    if (resp.code === 200) {
+        dialog.title = "权限"
+        dialog.width = 400
+        dialog.type = "permission"
+        dialog.show = true
+        treePermissionData.data = resp.data.records
+    }
+}
+ async function getPermissionIds() {
+    const resp: any = await http.get("/role/permission/"+dialog.id)
+    if (resp.code === 200) {
+        treeRef.value!.setCheckedKeys(resp.data, false)
+    }
+}
+
+ async function getMenu() {
+    const resp: any = await http.get("/menu/page", {  page: 1, size: 999 })
+    if (resp.code === 200) {
+        dialog.title = "菜单"
+        dialog.width = 400
+        dialog.type = "menu"
+        dialog.show = true
+        treeMenuData.data = resp.data.records
+    }
+}
+ async function getMenuIds() {
+    const resp: any = await http.get("/role/menu/"+dialog.id)
+    if (resp.code === 200) {
+        treeRef.value!.setCheckedKeys(resp.data, false)
+    }
+}
 
 </script>
 
 <template>
-    <el-button type="primary" @click="showDailog">添加角色</el-button>
+    <el-button type="primary" @click="showDialog">添加角色</el-button>
     <div class="menu-list-box">
 
         <el-table :empty-text="'暂无数据'" :stripe="true" :data="roleData.data" :highlight-current-row="true"
@@ -243,8 +255,8 @@ async function update(formData: any) {
             @update:current-page="handleCurrentChange" />
 
         <el-dialog v-model="dialog.show" :title="dialog.title" :width="dialog.width">
-            <div class="dialog-show-box" v-if="dialog.type == 'menu' || dialog.type == 'permission'">
-                <el-tree ref="settingTree" :data="treeData.value.data" :props="treeProps" node-key="id" show-checkbox />
+            <div class="dialog-show-box" v-if="dialog.type == 'permission'">
+                <el-tree ref="treeRef" :data="treePermissionData.data" :props="treePermissionProps" node-key="permissionId" show-checkbox />
                 <div class="setting-tree-btn-box">
                     <el-button @click="dialogFormVisible(0)">取消</el-button>
                     <el-button type="primary" @click="dialogFormVisible(1)">
@@ -252,7 +264,16 @@ async function update(formData: any) {
                     </el-button>
                 </div>
             </div>
-            <div v-else>
+            <div class="dialog-show-box" v-if="dialog.type == 'menu'">
+                <el-tree ref="treeRef" :data="treeMenuData.data" :props="treeMenuProps" node-key="menuId" show-checkbox />
+                <div class="setting-tree-btn-box">
+                    <el-button @click="dialogFormVisible(0)">取消</el-button>
+                    <el-button type="primary" @click="dialogFormVisible(1)">
+                        提交
+                    </el-button>
+                </div>
+            </div>
+            <div v-if="dialog.type=='add'||dialog.type=='update'">
                 <el-form :model="form" ref="formRef" :rules="formRule" label-width="80px">
                     <el-form-item label="角色名称" prop="roleName">
                         <el-input v-model="form.roleName"></el-input>

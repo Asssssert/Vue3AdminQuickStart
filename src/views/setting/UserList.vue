@@ -6,6 +6,7 @@ const dialog = reactive({
     title: "",
     show: false,
     width: 400,
+    id: 0,
     type: "",
 
 })
@@ -23,20 +24,17 @@ const userData = reactive(
 )
 
 const roleData = reactive(
-    {
-        data: [
-            { id: 1, name: "admin", nickname: "管理员" },
-            { id: 2, name: "user", nickname: "普通用户" },
-        ]
-    }
+    {data: []}
 )
 
-const settingTree = ref<InstanceType<typeof ElTree>>()
+const treeRef = ref<InstanceType<typeof ElTree>>()
 
 
 const treeProps = {
+    id: 'roleId',
+    value: 'roleId',
     label: 'roleName',
-    children: 'child'
+    children: 'children'
 }
 
 const searchKey = ref("")
@@ -82,11 +80,12 @@ onMounted(async () => {
 
 async function showDialog(flag: number) {
     if (flag == 1) {
-        const checkPerId = settingTree.value.getCheckedKeys()
+        const checkPerId = treeRef.value!.getCheckedKeys()
         console.log(checkPerId);
     }
     dialog.show = false
 }
+
 async function getData() {
     http.get("/user/search", { key: searchKey.value, page: 1, size: 10 })
         .then((resp: any) => {
@@ -97,12 +96,24 @@ async function getData() {
             pagination.size = resp.data.size
         })
 }
+
 async function getRole() {
-    http.get("/role/list")
-        .then((resp: any) => {
-            const data = resp.data;
-            roleData.data = data
-        })
+    const resp:any = await http.get("/role/list")
+    if (resp.code == 200) {
+        
+        dialog.show = true
+        dialog.type = "role"
+        dialog.width = 400
+        dialog.title = "编辑角色"
+        let data = resp.data;
+        roleData.data = data
+    }
+}
+async function getRoleIds() {
+    const resp:any = await http.get("/user/role/"+dialog.id)
+    if (resp.code == 200) {
+        treeRef.value!.setCheckedKeys(resp.data, false)
+    }
 }
 
 
@@ -113,14 +124,14 @@ async function handleCurrentChange(val: number) {
 async function handleSizeChange(val: number) {
 
 }
-async function handleDel(row: object) {
+async function handleDel(row: any) {
     const resp = await http.delete("/user/" + row.userId);
     if (resp.code == 200) {
         getData()
         notice("success", "提示", resp.msg)
     }
 }
-async function handleEdit(row: object) {
+async function handleEdit(row: any) {
     dialog.show = true
     dialog.type = "update"
     dialog.title = "编辑用户"
@@ -137,12 +148,11 @@ async function handleEdit(row: object) {
 
 
 }
-async function handleRole(row: object) {
-    getRole()
-    dialog.show = true
-    dialog.type = "role"
-    dialog.width = 400
-    dialog.title = "编辑角色"
+async function handleRole(row: any) {
+    dialog.id = row.userId
+    await getRole()
+
+    await getRoleIds()
 
 }
 
@@ -183,6 +193,17 @@ async function update(formData: any) {
     } else {
         notice("error", "提示", resp.msg);
     }
+}
+
+async function dialogFormVisible  (flag: number)  {
+    if(flag==1){
+        let nodeData ={userId:dialog.id,roleIds:treeRef.value!.getCheckedKeys(false)}
+        const resp = await http.post("/user/upd/role", nodeData)
+        if (resp.code == 200) {
+            notice("success", "提示", resp.msg)
+        }
+    }
+    dialog.show = false
 }
 
 </script>
@@ -231,8 +252,15 @@ async function update(formData: any) {
             @update:current-page="handleCurrentChange" />
 
         <el-dialog v-model="dialog.show" :title="dialog.title" :width="dialog.width">
-            <el-tree v-if="dialog.type == 'role'" ref="settingTree" :data="roleData.data" :props="treeProps"
-                node-key="id" show-checkbox />
+            <div class="dialog-show-box" v-if="dialog.type == 'role'">
+                <el-tree ref="treeRef" :data="roleData.data" :props="treeProps"  node-key="roleId" show-checkbox />
+                <div class="setting-tree-btn-box">
+                    <el-button @click="dialogFormVisible(0)">取消</el-button>
+                    <el-button type="primary" @click="dialogFormVisible(1)">
+                        提交
+                    </el-button>
+                </div></div>
+            
             <div class="setting-tree-btn-box" v-if="dialog.type == 'add' || dialog.type == 'update'">
                 <el-form :model="form" ref="formRef" :rules="formRule" label-width="80px">
                     <el-form-item label="用户名" prop="username">

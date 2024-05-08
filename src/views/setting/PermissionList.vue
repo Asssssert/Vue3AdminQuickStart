@@ -147,14 +147,14 @@ async function handleCurrentChange(val: number) {
 async function handleSizeChange(val: number) {
 
 }
-async function handleDel(row: object) {
-    const resp = await http.delete("/permission/" + row.permissionId);
+async function handleDel(row: any) {
+    const resp = await http.delete("/permission/" + row.permissionId );
     if (resp.code == 200) {
         getData()
         notice("success", "提示", resp.msg)
     }
 }
-async function handleEdit(row: object) {
+async function handleEdit(row: any) {
     dialog.title = "编辑权限"
     dialog.type = "update"
     dialog.show = true
